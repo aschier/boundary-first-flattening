@@ -364,8 +364,7 @@ bool MeshIO::buildMesh(const PolygonSoup& soup,
 
 	// create and insert boundary halfedges and "imaginary" faces for boundary cycles
 	// also create and insert corners
-	HalfEdgeIter end = mesh.halfEdges.end();
-	for (HalfEdgeIter h = mesh.halfEdges.begin(); h != end; h++) {
+	for (HalfEdgeIter h = mesh.halfEdges.begin(); h != mesh.halfEdges.end(); h++) {
 		// if a halfedge has no flip halfedge, create a new face and
 		// link it the corresponding boundary cycle
 		if (!hasFlipEdge[h->index]) {
