@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.1.0)
 project(bff)
 
+set(CMAKE_DEBUG_POSTFIX "d")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
+include(CMakePackageConfigHelpers)
 
 # suitesparse
 # ------------------------------------------------------------------
@@ -21,13 +25,8 @@ if(NOT SuiteSparse_FOUND)
 endif()
 MESSAGE(STATUS "SuiteSparse_LIBS: ${SuiteSparse_LIBRARIES}")
 
-# bff lib
-list(APPEND BFF_INCLUDE_DIRS ${SuiteSparse_INCLUDE_DIRS})
-list(APPEND BFF_INCLUDE_DIRS "deps/rectangle-bin-pack/include")
-list(APPEND BFF_INCLUDE_DIRS "linear-algebra/include")
-list(APPEND BFF_INCLUDE_DIRS "mesh/include")
-list(APPEND BFF_INCLUDE_DIRS "project/include")
-include_directories(${BFF_INCLUDE_DIRS})
+# OpenBLAS
+find_package(OpenBLAS 0.3.5 REQUIRED)
 
 file(GLOB BFF_SOURCES
 	"deps/rectangle-bin-pack/src/*.cpp" "deps/rectangle-bin-pack/include/*.h"
@@ -36,12 +35,24 @@ file(GLOB BFF_SOURCES
 	"project/src/*.cpp" "project/include/*.h")
 
 # create bff static library
-add_library(bff ${BFF_SOURCES})
-target_link_libraries(bff ${SuiteSparse_LIBRARIES})
+add_library(bff STATIC ${BFF_SOURCES})
+target_link_libraries(bff
+	PUBLIC
+	SuiteSparse::cholmod
+	OpenBLAS::OpenBLAS
+)
+target_include_directories(bff
+	PRIVATE
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/rectangle-bin-pack/include>
+	PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/linear-algebra/include>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mesh/include>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/project/include>
+	$<INSTALL_INTERFACE:include>
+)
 
 # build command line app
 file(GLOB COMMAND_LINE_SOURCES "command-line/*.cpp")
-
 add_executable(bff-command-line ${COMMAND_LINE_SOURCES})
 target_link_libraries(bff-command-line bff)
 
@@ -64,3 +75,29 @@ file(GLOB VIEWER_SOURCES "viewer/src/*.cpp" "viewer/include/*.h")
 # build viewer app
 add_executable(bff-viewer ${VIEWER_SOURCES})
 target_link_libraries(bff-viewer bff nanogui ${NANOGUI_EXTRA_LIBS})
+target_include_directories(bff-viewer PRIVATE
+	$<BUILD_INTERFACE:${VIEWER_INCLUDE_DIRS}>
+	$<BUILD_INTERFACE:${NANOGUI_EXTRA_INCS}>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/nanogui/include>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/nanogui/ext/glad/include>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/glm>
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/viewer/include>
+)
+target_compile_definitions(bff-viewer PRIVATE ${NANOGUI_EXTRA_DEFS})
+
+configure_package_config_file(bffConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/bffConfig.cmake INSTALL_DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+install(TARGETS bff EXPORT bff-targets LIBRARY DESTINATION lib ARCHIVE DESTINATION lib RUNTIME DESTINATION bin)
+install(TARGETS bff-command-line bff-viewer DESTINATION bin)
+
+install(DIRECTORY mesh/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY linear-algebra/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY project/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY mesh/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
+install(DIRECTORY linear-algebra/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
+install(DIRECTORY project/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
+if(${WITH_OPENMESH_INTERFACE})
+	install(DIRECTORY openmesh-interface/include/ DESTINATION include FILES_MATCHING PATTERN "*.h *.inl")
+endif()
+install(EXPORT bff-targets FILE bffTargets.cmake DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/bffConfig.cmake DESTINATION ${CMAKE_INSTALL_PREFIX})
