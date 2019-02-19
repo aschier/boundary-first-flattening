@@ -11,6 +11,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 include(CMakePackageConfigHelpers)
 
+set(WITH_OPENMESH_INTERFACE false CACHE BOOL "Build with OpenMesh interface")
+
 # suitesparse
 # ------------------------------------------------------------------
 # Detect SuiteSparse libraries:
@@ -34,6 +36,13 @@ file(GLOB BFF_SOURCES
 	"mesh/src/*.cpp" "mesh/include/*.h"
 	"project/src/*.cpp" "project/include/*.h")
 
+if(${WITH_OPENMESH_INTERFACE})
+	find_package(OpenMesh REQUIRED)
+	find_package(openmesh_structures REQUIRED)
+	list(APPEND BFF_SOURCES "openmesh-interface/bff_openmesh.cpp")
+	list(APPEND BFF_SOURCES "openmesh-interface/include/bff_openmesh.h")
+endif()
+
 # create bff static library
 add_library(bff STATIC ${BFF_SOURCES})
 target_link_libraries(bff
@@ -41,6 +50,17 @@ target_link_libraries(bff
 	SuiteSparse::cholmod
 	OpenBLAS::OpenBLAS
 )
+if(${WITH_OPENMESH_INTERFACE})
+	target_link_libraries(bff
+		PUBLIC
+		${OPENMESH_LIBRARIES}
+		openmesh_structures
+	)
+	target_include_directories(bff
+		PUBLIC
+		${OPENMESH_INCLUDE_DIR}
+	)
+endif()
 target_include_directories(bff
 	PRIVATE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/rectangle-bin-pack/include>
@@ -97,7 +117,8 @@ install(DIRECTORY mesh/include/ DESTINATION include FILES_MATCHING PATTERN "*.in
 install(DIRECTORY linear-algebra/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
 install(DIRECTORY project/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
 if(${WITH_OPENMESH_INTERFACE})
-	install(DIRECTORY openmesh-interface/include/ DESTINATION include FILES_MATCHING PATTERN "*.h *.inl")
+	install(DIRECTORY openmesh-interface/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+	install(DIRECTORY openmesh-interface/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
 endif()
 install(EXPORT bff-targets FILE bffTargets.cmake DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/bffConfig.cmake DESTINATION ${CMAKE_INSTALL_PREFIX})
