@@ -1,5 +1,5 @@
 #pragma once
-#include <Mesh.h>
+#include <BFFMesh.h>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include <openmesh_doubleprecisiontraits.h>
 

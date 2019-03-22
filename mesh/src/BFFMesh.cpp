@@ -1,4 +1,4 @@
-#include "Mesh.h"
+#include "BFFMesh.h"
 #include <limits>
 
 namespace bff {
