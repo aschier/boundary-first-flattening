@@ -1,6 +1,27 @@
 #include "SparseMatrix.h"
+#include <Eigen/Sparse>
 
-namespace bff {
+//extern Common common;
+
+typedef Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> cholmod_factor;
+
+inline cholmod_factor* cholmod_l_analyze(cholmod_sparse *C)
+{
+	cholmod_factor* f = new cholmod_factor();
+	f->analyzePattern(*C);
+	return f;
+}
+
+inline bool cholmod_l_factorize(cholmod_sparse *C, cholmod_factor *f)
+{
+	f->factorize(*C);
+	return true;
+}
+
+inline DenseMatrix cholmod_l_solve(cholmod_factor *f, cholmod_dense *B)
+{
+	return DenseMatrix(new cholmod_dense(f->solve(*B)));
+}
 
 inline Cholesky::Cholesky(SparseMatrix& A_):
 A(A_),
@@ -13,51 +34,50 @@ validNumeric(false)
 
 inline Cholesky::~Cholesky()
 {
-	clear();
+    clear();
 }
 
 inline void Cholesky::clear()
 {
-	if (factor) {
-		cholmod_l_free_factor(&factor, common);
-		factor = NULL;
-	}
+    if (factor) {
+        //cholmod_l_free_factor(&factor, common);
+		delete factor;
+        factor = NULL;
+    }
 
-	validSymbolic = false;
-	validNumeric = false;
+    validSymbolic = false;
+    validNumeric = false;
 }
 
 inline void Cholesky::clearNumeric()
 {
-	validNumeric = false;
+    validNumeric = false;
 }
 
 inline void Cholesky::buildSymbolic(cholmod_sparse *C)
 {
-	clear();
+    clear();
 
-	factor = cholmod_l_analyze(C, common);
-	if (factor) validSymbolic = true;
+    factor = cholmod_l_analyze(C);
+    if (factor) validSymbolic = true;
 }
 
 inline void Cholesky::buildNumeric(cholmod_sparse *C)
 {
-	if (factor) validNumeric = (bool)cholmod_l_factorize(C, factor, common);
+    if (factor) validNumeric = (bool)cholmod_l_factorize(C, factor);
 }
 
 inline void Cholesky::update()
 {
-	cholmod_sparse *C = A.toCholmod();
-	C->stype = 1;
+    cholmod_sparse *C = A.toCholmod();
+    //C->stype = 1;
 
-	if (!validSymbolic) buildSymbolic(C);
-	if (!validNumeric) buildNumeric(C);
+    if (!validSymbolic) buildSymbolic(C);
+    if (!validNumeric) buildNumeric(C);
 }
 
 inline void Cholesky::solvePositiveDefinite(DenseMatrix& x, DenseMatrix& b)
 {
-	update();
-	if (factor) x = cholmod_l_solve(CHOLMOD_A, factor, b.toCholmod(), common);
+    update();
+    if (factor) x = cholmod_l_solve(factor, b.toCholmod());
 }
-
-} // namespace bff

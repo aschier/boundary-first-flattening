@@ -1,49 +1,49 @@
 #pragma once
 
 #include "Common.h"
-
-namespace bff {
+#include <Eigen/Sparse>
 
 class DenseMatrix;
 class SparseMatrix;
 
+typedef Eigen::SparseMatrix<double> cholmod_sparse;
+typedef Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> cholmod_factor;
+
 class Cholesky {
 public:
-	// constructor
-	Cholesky(SparseMatrix& A);
+    // constructor
+    Cholesky(SparseMatrix& A);
 
-	// destructor
-	~Cholesky();
+    // destructor
+    ~Cholesky();
 
-	// clears both symbolic and numeric factorization --
-	// should be called following any change to nonzero entries
-	void clear();
+    // clears both symbolic and numeric factorization --
+    // should be called following any change to nonzero entries
+    void clear();
 
-	// clears only numeric factorization --
-	// should be called following any change to the values
-	// of nonzero entries
-	void clearNumeric();
+    // clears only numeric factorization --
+    // should be called following any change to the values
+    // of nonzero entries
+    void clearNumeric();
 
-	// solves positive definite
-	void solvePositiveDefinite(DenseMatrix& x, DenseMatrix& b);
+    // solve positive definite
+    void solvePositiveDefinite(DenseMatrix& x, DenseMatrix& b);
 
 protected:
-	// builds symbolic factorization
-	void buildSymbolic(cholmod_sparse *C);
+    // builds symbolic factorization
+    void buildSymbolic(cholmod_sparse *C);
 
-	// builds numeric factorization
-	void buildNumeric(cholmod_sparse *C);
+    // builds numeric factorization
+    void buildNumeric(cholmod_sparse *C);
 
-	// updates factorizations
-	void update();
+    // updates factorizations
+    void update();
 
-	// members
-	SparseMatrix& A;
-	cholmod_factor *factor;
-	bool validSymbolic;
-	bool validNumeric;
+    // members
+    SparseMatrix& A;
+    cholmod_factor *factor;
+    bool validSymbolic;
+    bool validNumeric;
 };
-
-} // namespace bff
 
 #include "Cholesky.inl"

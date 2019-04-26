@@ -7,22 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-# suitesparse
-# ------------------------------------------------------------------
-# Detect SuiteSparse libraries:
-# If not found automatically, set SuiteSparse_DIR in CMake to the
-# directory where SuiteSparse was built.
-# ------------------------------------------------------------------
-set(SuiteSparse_USE_LAPACK_BLAS ON)
-find_package(SuiteSparse QUIET NO_MODULE)  # 1st: Try to locate the *config.cmake file.
-if(NOT SuiteSparse_FOUND)
-	set(SuiteSparse_VERBOSE ON)
-	find_package(SuiteSparse REQUIRED) # 2nd: Use FindSuiteSparse.cmake module
-endif()
-MESSAGE(STATUS "SuiteSparse_LIBS: ${SuiteSparse_LIBRARIES}")
-
 # bff lib
-list(APPEND BFF_INCLUDE_DIRS ${SuiteSparse_INCLUDE_DIRS})
+list(APPEND BFF_INCLUDE_DIRS "deps/nanogui/ext/eigen")
 list(APPEND BFF_INCLUDE_DIRS "deps/rectangle-bin-pack/include")
 list(APPEND BFF_INCLUDE_DIRS "linear-algebra/include")
 list(APPEND BFF_INCLUDE_DIRS "mesh/include")
@@ -33,7 +19,6 @@ file(GLOB BFF_SOURCES "deps/rectangle-bin-pack/src/*.cpp" "linear-algebra/src/*.
 
 # create bff static library
 add_library(bff ${BFF_SOURCES})
-target_link_libraries(bff ${SuiteSparse_LIBRARIES})
 
 # build command line app
 file(GLOB COMMAND_LINE_SOURCES "command-line/*.cpp")
