@@ -40,9 +40,14 @@ file(GLOB BFF_SOURCES
 
 if(${WITH_OPENMESH_INTERFACE})
 	find_package(OpenMesh REQUIRED)
-	find_package(openmesh_structures REQUIRED)
-	list(APPEND BFF_SOURCES "openmesh-interface/bff_openmesh.cpp")
-	list(APPEND BFF_SOURCES "openmesh-interface/include/bff_openmesh.h")
+	add_library(bff-openmesh-interface INTERFACE)
+	target_link_libraries(bff-openmesh-interface INTERFACE
+		bff
+		${OPENMESH_LIBRARIES}
+	)
+	target_include_directories(bff-openmesh-interface INTERFACE
+		${OPENMESH_INCLUDE_DIR}
+	)
 endif()
 
 # create bff static library
@@ -52,17 +57,6 @@ target_link_libraries(bff
 	SuiteSparse::cholmod
 	OpenBLAS::OpenBLAS
 )
-if(${WITH_OPENMESH_INTERFACE})
-	target_link_libraries(bff
-		PUBLIC
-		${OPENMESH_LIBRARIES}
-		openmesh_structures
-	)
-	target_include_directories(bff
-		PUBLIC
-		${OPENMESH_INCLUDE_DIR}
-	)
-endif()
 target_include_directories(bff
 	PRIVATE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/deps/rectangle-bin-pack/include>
@@ -113,7 +107,10 @@ endif()
 configure_package_config_file(bffConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/bffConfig.cmake INSTALL_DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 install(TARGETS bff EXPORT bff-targets LIBRARY DESTINATION lib ARCHIVE DESTINATION lib RUNTIME DESTINATION bin)
-install(TARGETS bff-command-line)
+install(TARGETS bff-command-line DESTINATION bin)
+if(${WITH_OPENMESH_INTERFACE})
+	install(TARGETS bff-openmesh-interface EXPORT bff-targets)
+endif()
 
 install(DIRECTORY mesh/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY linear-algebra/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
@@ -122,8 +119,7 @@ install(DIRECTORY mesh/include/ DESTINATION include FILES_MATCHING PATTERN "*.in
 install(DIRECTORY linear-algebra/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
 install(DIRECTORY project/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
 if(${WITH_OPENMESH_INTERFACE})
-	install(DIRECTORY openmesh-interface/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
-	install(DIRECTORY openmesh-interface/include/ DESTINATION include FILES_MATCHING PATTERN "*.inl")
+	install(DIRECTORY openmesh-interface/include/ DESTINATION include FILES_MATCHING PATTERN "*.hpp")
 endif()
 install(EXPORT bff-targets FILE bffTargets.cmake DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/bffConfig.cmake DESTINATION ${CMAKE_INSTALL_PREFIX})
